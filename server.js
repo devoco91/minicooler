@@ -1,3 +1,5 @@
+// ./server.js
+
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -9,63 +11,55 @@ dotenv.config();
 
 const app = express();
 
+const PORT = process.env.PORT || 5000;
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://your-frontend-domain.com",
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173", // Vite frontend
-      "http://localhost:3000",
-    ],
-    methods: [
-      "GET",
-      "POST",
-      "PATCH",
-      "DELETE",
-      "PUT",
-    ],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(
+        new Error("CORS policy blocked this origin"),
+        false
+      );
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   })
 );
 
-// explicit headers
-app.use((req, res, next) => {
-  res.header(
-    "Access-Control-Allow-Origin",
-    "http://localhost:5173"
-  );
-
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-  );
-
-  res.header(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, PATCH, DELETE"
-  );
-
-  res.header(
-    "Access-Control-Allow-Credentials",
-    "true"
-  );
-
-  next();
-});
-
 app.use(express.json());
+
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Backend is running",
+  });
+});
 
 app.use("/api/orders", orderRoutes);
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
+const startServer = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+
     console.log("MongoDB Connected");
 
-    app.listen(process.env.PORT, () => {
-      console.log(
-        `Server running on ${process.env.PORT}`
-      );
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on ${PORT}`);
     });
-  })
-  .catch((err) => {
-    console.log(err);
-  });
+  } catch (error) {
+    console.error("Server startup failed:", error.message);
+    process.exit(1);
+  }
+};
+
+startServer();
