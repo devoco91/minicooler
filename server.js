@@ -10,6 +10,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 dotenv.config();
 
 const app = express();
+
 const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
@@ -17,7 +18,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://cooler-six.vercel.app",
   "https://www.quicknest.online",
-  "https://quicknest.online", // added
+  "https://quicknest.online",
 ];
 
 app.use(
@@ -26,8 +27,6 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-
-      console.log("Blocked origin:", origin);
 
       return callback(
         new Error("CORS policy blocked this origin"),
