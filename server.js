@@ -17,6 +17,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "https://cooler-six.vercel.app",
+  "https://www.quicknest.online",
 ];
 
 app.use(
