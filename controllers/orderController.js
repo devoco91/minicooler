@@ -11,6 +11,7 @@ export const createOrder = async (req, res) => {
       address,
     } = req.body;
 
+    // Save order first
     const order = await Order.create({
       fullname,
       phone,
@@ -19,14 +20,15 @@ export const createOrder = async (req, res) => {
       address,
     });
 
-    await axios.post(
-      `https://api.ultramsg.com/${process.env.ULTRAMSG_INSTANCE}/messages/chat`,
-      {
-        token: process.env.ULTRAMSG_TOKEN,
-
-        to: phone,
-
-        body: `Hello ${fullname},
+    // Try sending WhatsApp message
+    // If it fails, the order will still be successful
+    try {
+      await axios.post(
+        `https://api.ultramsg.com/${process.env.ULTRAMSG_INSTANCE}/messages/chat`,
+        {
+          token: process.env.ULTRAMSG_TOKEN,
+          to: phone,
+          body: `Hello ${fullname},
 
 Your order has been received successfully ✅
 
@@ -38,21 +40,37 @@ Address:
 ${address}
 
 Our delivery agent will contact you shortly.`,
-      }
-    );
+        },
+        {
+          timeout: 10000,
+        }
+      );
 
-    res.status(201).json({
+      console.log(`WhatsApp sent to ${phone}`);
+    } catch (whatsappError) {
+      console.error(
+        "WhatsApp failed:",
+        whatsappError.response?.data || whatsappError.message
+      );
+
+      // Don't stop order creation if WhatsApp fails
+    }
+
+    return res.status(201).json({
       success: true,
       message: "Order submitted successfully",
       order,
     });
 
   } catch (error) {
-    console.log(error.response?.data || error.message);
+    console.error(
+      "Create order error:",
+      error.response?.data || error.message
+    );
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Server error",
+      message: "Failed to submit order",
     });
   }
 };
@@ -63,23 +81,22 @@ export const getOrders = async (req, res) => {
       createdAt: -1,
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       orders,
     });
 
   } catch (error) {
-    res.status(500).json({
+    console.error(error);
+
+    return res.status(500).json({
       success: false,
       message: "Failed to fetch orders",
     });
   }
 };
 
-export const updateDeliveredStatus = async (
-  req,
-  res
-) => {
+export const updateDeliveredStatus = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -96,13 +113,15 @@ export const updateDeliveredStatus = async (
 
     await order.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       order,
     });
 
   } catch (error) {
-    res.status(500).json({
+    console.error(error);
+
+    return res.status(500).json({
       success: false,
       message: "Failed to update order",
     });
@@ -124,13 +143,15 @@ export const deleteOrder = async (req, res) => {
 
     await Order.findByIdAndDelete(id);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Order deleted successfully",
     });
 
   } catch (error) {
-    res.status(500).json({
+    console.error(error);
+
+    return res.status(500).json({
       success: false,
       message: "Failed to delete order",
     });
